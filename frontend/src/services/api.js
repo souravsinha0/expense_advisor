@@ -13,10 +13,19 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    console.log('API Request:', config.method?.toUpperCase(), config.url);
-    const token = await AsyncStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      console.log('API Request:', config.method?.toUpperCase(), config.url);
+      let token = null;
+      try {
+        token = await AsyncStorage.getItem('token');
+      } catch (storageError) {
+        console.warn('AsyncStorage getItem failed:', storageError);
+      }
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.warn('Failed to get token from storage:', error);
     }
     return config;
   },
@@ -35,8 +44,11 @@ api.interceptors.response.use(
   async (error) => {
     console.error('API Error:', error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem('token');
-      // Redirect to login
+      try {
+        await AsyncStorage.removeItem('token');
+      } catch (e) {
+        console.warn('Failed to remove token:', e);
+      }
     }
     return Promise.reject(error);
   }

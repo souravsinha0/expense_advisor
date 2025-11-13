@@ -49,7 +49,8 @@ async def get_ai_response(message: str, user_id: int, db: Session) -> str:
     2. Do NOT search the internet or use external information
     3. Do NOT make assumptions about data not provided
     4. Focus only on the user's actual transaction history
-    5. If asked about data you don't have, say "I don't have that information in your records"
+    5. Double check your calculations based on the data provided
+    6. If asked about data you don't have, say "I don't have that information in your records"
     
     User question: {message}
     

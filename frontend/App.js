@@ -1,18 +1,100 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
-import { AuthProvider } from './src/context/AuthContext';
-import AppNavigator from './src/navigation/AppNavigator';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import BottomTabNavigator from './src/components/BottomTabNavigator';
 import { theme } from './src/utils/theme';
+
+// Import screens directly
+import LoginScreen from './src/screens/LoginScreen';
+import SignupScreen from './src/screens/SignupScreen';
+import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import CalendarScreen from './src/screens/CalendarScreen';
+import ReportsScreen from './src/screens/ReportsScreen';
+import AIChatScreen from './src/screens/AIChatScreen';
+
+function AppContent() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState('login');
+  const [currentTab, setCurrentTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
+      setCurrentScreen('login');
+    } else if (!user?.is_profile_complete) {
+      setCurrentScreen('profileSetup');
+    } else {
+      setCurrentScreen('dashboard');
+    }
+  }, [isAuthenticated, isLoading, user]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  const navigation = {
+    navigate: (screen) => {
+      if (typeof screen === 'string' && screen.toLowerCase() === 'signup') {
+        setCurrentScreen('signup');
+      } else if (typeof screen === 'string' && screen.toLowerCase() === 'login') {
+        setCurrentScreen('login');
+      } else {
+        setCurrentScreen('dashboard');
+      }
+    },
+    replace: (screen) => {
+      setCurrentScreen(screen);
+    },
+  };
+
+  const isMainApp = isAuthenticated && user?.is_profile_complete;
+
+  // Auth screens (no tabs)
+  if (currentScreen === 'signup') {
+    return <SignupScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'profileSetup') {
+    return <ProfileSetupScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'login') {
+    return <LoginScreen navigation={navigation} />;
+  }
+
+  // Main app screens with tabs
+  return (
+    <View style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <View style={{ flex: 1, width: '100%', overflow: 'hidden', minHeight: 0 }}>
+        {currentTab === 'dashboard' && <DashboardScreen navigation={navigation} />}
+        {currentTab === 'calendar' && <CalendarScreen navigation={navigation} />}
+        {currentTab === 'reports' && <ReportsScreen navigation={navigation} />}
+        {currentTab === 'aiChat' && <AIChatScreen navigation={navigation} />}
+      </View>
+      {isMainApp && (
+        <BottomTabNavigator 
+          currentTab={currentTab} 
+          onTabChange={setCurrentTab}
+        />
+      )}
+    </View>
+  );
+}
 
 export default function App() {
   return (
-    <PaperProvider theme={theme}>
-      <AuthProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </AuthProvider>
-    </PaperProvider>
+    <ErrorBoundary>
+      <PaperProvider theme={theme}>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </PaperProvider>
+    </ErrorBoundary>
   );
 }

@@ -50,16 +50,31 @@ export function AuthProvider({ children }) {
 
   const checkAuthState = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      let token = null;
+      try {
+        token = await AsyncStorage.getItem('token');
+      } catch (storageError) {
+        console.warn('AsyncStorage not available (normal on web):', storageError);
+      }
+
       if (token) {
-        const response = await userAPI.getProfile();
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: { user: response.data, token },
-        });
+        try {
+          const response = await userAPI.getProfile();
+          dispatch({
+            type: 'LOGIN_SUCCESS',
+            payload: { user: response.data, token },
+          });
+        } catch (profileError) {
+          console.warn('Failed to fetch user profile:', profileError);
+          try {
+            await AsyncStorage.removeItem('token');
+          } catch (e) {
+            console.warn('Failed to remove token:', e);
+          }
+        }
       }
     } catch (error) {
-      await AsyncStorage.removeItem('token');
+      console.warn('Auth check failed:', error);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }

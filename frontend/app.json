@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1976D2"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -21,13 +21,25 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#1976D2"
       },
       "package": "com.expenseadvisor.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single",
+      "display": "standalone",
+      "startUrl": "/",
+      "themeColor": "#1976D2",
+      "backgroundColor": "#ffffff",
+      "build": {
+        "babel": {
+          "include": [
+            "@react-native-async-storage/async-storage"
+          ]
+        }
+      }
     },
     "plugins": [
       "expo-notifications"

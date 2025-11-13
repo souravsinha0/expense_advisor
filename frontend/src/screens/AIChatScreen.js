@@ -4,7 +4,7 @@ import { Card, Title, TextInput, Button, Text, Avatar, IconButton } from 'react-
 import { aiAPI } from '../services/api';
 import { theme, commonStyles } from '../utils/theme';
 
-export default function AIChatScreen() {
+export default function AIChatScreen({ navigation }) {
   const [messages, setMessages] = useState([
     {
       id: 1,

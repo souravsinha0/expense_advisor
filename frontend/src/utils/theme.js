@@ -4,7 +4,7 @@ export const theme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: '#199bd2ff',
+    primary: '#1976D2',
     secondary: '#FF9800',
     surface: '#FFFFFF',
     background: '#F5F7FA',
@@ -24,6 +24,7 @@ export const commonStyles = {
     flex: 1,
     backgroundColor: '#F5F7FA',
     padding: 16,
+    paddingTop: 16,
   },
   card: {
     marginVertical: 8,

@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Text } from 'react-native';
 
 // Auth Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -34,19 +34,19 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+          let iconText;
           
           if (route.name === 'Dashboard') {
-            iconName = 'dashboard';
+            iconText = '📊';
           } else if (route.name === 'Calendar') {
-            iconName = 'calendar-today';
+            iconText = '📅';
           } else if (route.name === 'Reports') {
-            iconName = 'assessment';
+            iconText = '📈';
           } else if (route.name === 'AI Chat') {
-            iconName = 'chat';
+            iconText = '💬';
           }
           
-          return <Icon name={iconName} size={size} color={color} />;
+          return <Text style={{ fontSize: size, color }}>{iconText}</Text>;
         },
         tabBarActiveTintColor: '#1976D2',
         tabBarInactiveTintColor: '#757575',

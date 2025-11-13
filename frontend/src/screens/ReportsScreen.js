@@ -5,7 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { reportAPI } from '../services/api';
 import { theme, commonStyles } from '../utils/theme';
 
-export default function ReportsScreen() {
+export default function ReportsScreen({ navigation }) {
   const [fromMonth, setFromMonth] = useState(new Date().getMonth() + 1);
   const [fromYear, setFromYear] = useState(new Date().getFullYear());
   const [toMonth, setToMonth] = useState(new Date().getMonth() + 1);

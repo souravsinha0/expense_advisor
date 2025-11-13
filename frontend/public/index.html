@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1976D2" />
+  <meta name="description" content="AI-powered expense tracking and financial management" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Expense Advisor" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <!-- <link rel="manifest" href="/test.json" /> -->
+  
+  <title>Expense Advisor</title>
+  
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #F5F7FA;
+    }
+    
+    #root {
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #1976D2;
+      color: white;
+      font-size: 18px;
+    }
+    
+    @media (display-mode: standalone) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root">
+    <div class="loading">Loading Expense Advisor...</div>
+  </div>
+  
+  <script>
+    // Global error handler to catch JavaScript errors
+    window.addEventListener('error', (event) => {
+      console.error('Global error caught:', event.error);
+      const errorDiv = document.getElementById('root');
+      if (errorDiv) {
+        errorDiv.innerHTML = `
+          <div style="padding: 20px; background: #ffebee; color: #c62828; font-family: monospace; overflow: auto; height: 100vh;">
+            <h2>Application Error</h2>
+            <p><strong>Error:</strong> ${event.error?.message || event.message}</p>
+            <p><strong>Source:</strong> ${event.filename}:${event.lineno}:${event.colno}</p>
+            <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow: auto;">
+${event.error?.stack || 'No stack trace available'}
+            </pre>
+            <p style="color: #666;">Check browser console (F12) for more details.</p>
+          </div>
+        `;
+      }
+    });
+
+    // Catch unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled rejection:', event.reason);
+      const errorDiv = document.getElementById('root');
+      if (errorDiv) {
+        errorDiv.innerHTML = `
+          <div style="padding: 20px; background: #ffebee; color: #c62828; font-family: monospace; overflow: auto; height: 100vh;">
+            <h2>Unhandled Promise Rejection</h2>
+            <p><strong>Reason:</strong> ${event.reason?.message || event.reason}</p>
+            <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow: auto;">
+${event.reason?.stack || JSON.stringify(event.reason, null, 2)}
+            </pre>
+            <p style="color: #666;">Check browser console (F12) for more details.</p>
+          </div>
+        `;
+      }
+    });
+
+    // Register service worker (optional)
+    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.warn('SW registration failed: ', registrationError);
+          });
+      });
+    }
+    
+    // PWA install prompt
+    window.deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+    });
+  </script>
+</body>
+</html>

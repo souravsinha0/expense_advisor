@@ -72,7 +72,7 @@ docker-compose up -d
 docker-compose exec backend alembic upgrade head
 
 # Setup AI model
-docker-compose exec ollama ollama pull llama2
+docker-compose exec ollama ollama pull llama3:latest
 
 # Access the application
 # Web: http://localhost:3000
