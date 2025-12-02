@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Alert } from 'react-native';
-import { Card, Title, Text, Button, TextInput, Modal, Portal, Switch } from 'react-native-paper';
-import { LineChart } from 'react-native-chart-kit';
+import { View, StyleSheet, ScrollView, Dimensions, Alert, TouchableOpacity } from 'react-native';
+import {
+  Surface, Text, Button, TextInput, Modal, Portal, Switch, Divider
+} from 'react-native-paper';
+import { AnimatedLineChart } from '../components/AnimatedChart';
 import { useAuth } from '../context/AuthContext';
 import { expenseAPI, aiAPI, userAPI } from '../services/api';
-import { theme, commonStyles } from '../utils/theme';
+import { commonStyles } from '../utils/theme';
 
-const screenWidth = Dimensions.get('window').width;
+const { width: windowWidth } = Dimensions.get('window');
 
 export default function DashboardScreen({ navigation }) {
   const { user, logout, updateUser } = useAuth();
@@ -17,6 +19,9 @@ export default function DashboardScreen({ navigation }) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [profileData, setProfileData] = useState({});
 
+  // NEW: dynamic measured width for chart
+  const [chartWidth, setChartWidth] = useState(windowWidth - 40);
+
   useEffect(() => {
     loadDashboardData();
     loadProfile();
@@ -24,35 +29,27 @@ export default function DashboardScreen({ navigation }) {
 
   const loadDashboardData = async () => {
     try {
-      const response = await expenseAPI.getDashboardStats();
-      setDashboardData(response.data);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    }
+      const res = await expenseAPI.getDashboardStats();
+      setDashboardData(res.data);
+    } catch (err) { console.error(err); }
   };
 
   const loadProfile = async () => {
     try {
-      const response = await userAPI.getProfile();
-      setProfileData(response.data);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    }
+      const res = await userAPI.getProfile();
+      setProfileData(res.data);
+    } catch (err) { console.error(err); }
   };
 
   const handleAIQuery = async () => {
     if (!aiQuery.trim()) return;
-    
     setLoading(true);
     try {
-      const response = await aiAPI.chat({ message: aiQuery });
-      setAiResponse(response.data.response);
+      const res = await aiAPI.chat({ message: aiQuery });
+      setAiResponse(res.data.response);
       setAiQuery('');
-    } catch (error) {
-      console.error('AI query error:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const updateProfile = async () => {
@@ -60,9 +57,8 @@ export default function DashboardScreen({ navigation }) {
       await userAPI.updateProfile(profileData);
       updateUser(profileData);
       setProfileVisible(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
+      Alert.alert('Success', 'Profile updated!');
+    } catch (err) {
       Alert.alert('Error', 'Failed to update profile');
     }
   };
@@ -71,228 +67,173 @@ export default function DashboardScreen({ navigation }) {
     labels: dashboardData.months.map(m => m.month.substring(0, 3)),
     datasets: [
       {
-        data: dashboardData.months.map(m => m.credit),
-        color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
-        strokeWidth: 3,
+        data: dashboardData.months.map(m => m.credit || 0),
+        color: () => '#10b981',
+        strokeWidth: 4,
       },
       {
-        data: dashboardData.months.map(m => m.debit),
-        color: (opacity = 1) => `rgba(244, 67, 54, ${opacity})`,
-        strokeWidth: 3,
-      },
+        data: dashboardData.months.map(m => m.debit || 0),
+        color: () => '#ef4444',
+        strokeWidth: 4,
+      }
     ],
     legend: ['Income', 'Expenses']
   } : null;
 
   return (
-    <View style={[commonStyles.container, { padding: 0 }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Card style={styles.headerCard}>
-          <Card.Content>
-            <View style={commonStyles.row}>
-              <View>
-                <Title style={styles.headerTitle}>Welcome Back!</Title>
-                <Text style={styles.headerSubtitle}>{user?.full_name || 'User'}</Text>
-              </View>
-              <View style={styles.headerButtons}>
-                <Button 
-                  mode="contained" 
-                  onPress={() => setProfileVisible(true)}
-                  style={styles.headerButton}
-                  labelStyle={styles.headerButtonText}
-                  compact
-                >
-                  Profile
-                </Button>
-                <Button 
-                  mode="outlined" 
-                  onPress={logout}
-                  style={styles.logoutButton}
-                  labelStyle={styles.logoutButtonText}
-                  compact
-                >
-                  Logout
-                </Button>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
+    <View style={commonStyles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
 
-        {/* Chart */}
+        {/* Elegant Header */}
+        <Surface style={styles.headerCard} elevation={6}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greeting}>Welcome back,</Text>
+              <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
+              <Text style={styles.subtitle}>Your financial overview</Text>
+            </View>
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => setProfileVisible(true)}>
+                <Text style={styles.icon}>Settings</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn} onPress={logout}>
+                <Text style={styles.icon}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Surface>
+
+        {/* Chart Card (measures container width and uses it) */}
         {chartData && (
-          <Card style={commonStyles.card}>
-            <Card.Content>
-              <Title style={commonStyles.subtitle}>Last 4 Months Overview</Title>
-              <View style={styles.chartContainer}>
-                <LineChart
-                  data={chartData}
-                  width={screenWidth - 80}
-                  height={240}
+          <Surface style={styles.chartCard} elevation={6}>
+            <Text style={styles.chartTitle}>Income vs Expenses (Last 4 Months)</Text>
+
+            {/* onLayout measures available width and stores it in chartWidth */}
+            <View
+              style={styles.chartContainer}
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                // keep a small safe padding internally (so chart dots/shadow don't touch edges)
+                const safe = Math.max(0, w - 8);
+                if (safe !== chartWidth) setChartWidth(safe);
+              }}
+            >
+              {/* pass the measured chartWidth so chart never overflows */}
+              <AnimatedLineChart
+                data={chartData}
+                width={Math.max(0, Math.floor(chartWidth))}
+                height={260}
                 chartConfig={{
-                  backgroundColor: '#ffffff',
                   backgroundGradientFrom: '#ffffff',
                   backgroundGradientTo: '#ffffff',
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: { borderRadius: 16 },
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: "#FF9800"
-                  }
+                  color: () => '#64748b',
+                  labelColor: () => '#94a3b8',
+                  propsForDots: { r: "6", strokeWidth: "3", stroke: "#fff" },
+                  fillShadowGradient: '#3b82f6',
+                  fillShadowGradientOpacity: 0.1,
                 }}
                 bezier
-                style={styles.chart}
-                withDots={true}
-                onDataPointClick={(data) => {
-                  Alert.alert(
-                    'Month Details',
-                    `${chartData.labels[data.index]}: $${data.value.toFixed(2)}`
-                  );
-                }}
-                />
+                withDots
+                withShadow
+                fromZero
+                yAxisLabel="₹"
+                style={{ borderRadius: 12, overflow: 'hidden' }}
+              />
+            </View>
+
+            <View style={styles.legend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: '#10b981' }]} />
+                <Text style={styles.legendText}>Income</Text>
               </View>
-            </Card.Content>
-          </Card>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: '#ef4444' }]} />
+                <Text style={styles.legendText}>Expenses</Text>
+              </View>
+            </View>
+          </Surface>
         )}
 
-        {/* AI Chat */}
-        <Card style={[commonStyles.card, styles.aiCard]}>
-          <Card.Content>
-            <Title style={commonStyles.subtitle}>Ask AI Assistant</Title>
-            <View style={styles.aiContainer}>
-              <TextInput
-                label="Ask about your finances..."
-                value={aiQuery}
-                onChangeText={setAiQuery}
-                mode="outlined"
-                multiline
-                style={styles.aiInput}
-              />
-              <Button
-                mode="contained"
-                onPress={handleAIQuery}
-                loading={loading}
-                style={styles.aiButton}
-                disabled={!aiQuery.trim()}
-              >
-                Ask AI
-              </Button>
-            </View>
-            {aiResponse ? (
-              <Card style={styles.responseCard}>
-                <Card.Content>
-                  <Text style={styles.responseText}>{aiResponse}</Text>
-                </Card.Content>
-              </Card>
-            ) : null}
-          </Card.Content>
-        </Card>
+        {/* AI Assistant */}
+        <Surface style={styles.aiCard} elevation={6}>
+          <Text style={styles.aiTitle}>AI Financial Assistant</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              mode="outlined"
+              placeholder="Ask about your spending..."
+              value={aiQuery}
+              onChangeText={setAiQuery}
+              style={styles.input}
+              outlineStyle={{ borderRadius: 16 }}
+              theme={{ roundness: 16 }}
+            />
+            <Button
+              mode="contained"
+              onPress={handleAIQuery}
+              loading={loading}
+              disabled={!aiQuery.trim()}
+              contentStyle={{ height: 52 }}
+              style={styles.sendBtn}
+            >
+              Send
+            </Button>
+          </View>
 
-        {/* Quick Actions */}
-        <Card style={[commonStyles.card, styles.actionsCard]}>
-          <Card.Content>
-            <Title style={commonStyles.subtitle}>Quick Actions</Title>
-            <View style={styles.actionButtons}>
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('Calendar')}
-                style={styles.actionButton}
-                icon="plus"
-              >
-                Add Expense
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => navigation.navigate('Reports')}
-                style={styles.actionButton}
-                icon="chart-line"
-              >
-                View Reports
-              </Button>
+          {aiResponse && (
+            <View style={styles.bubble}>
+              <Text style={styles.bubbleTitle}>AI Response</Text>
+              <Text style={styles.bubbleText}>{aiResponse}</Text>
             </View>
-          </Card.Content>
-        </Card>
+          )}
+        </Surface>
+
       </ScrollView>
 
       {/* Profile Modal */}
       <Portal>
-        <Modal visible={profileVisible} onDismiss={() => setProfileVisible(false)} contentContainerStyle={styles.modal}>
-          <Card>
-            <Card.Content>
-              <Title style={styles.modalTitle}>Profile Settings</Title>
-              <TextInput
-                label="Full Name"
-                value={profileData.full_name || ''}
-                onChangeText={(text) => setProfileData({...profileData, full_name: text})}
-                mode="outlined"
-                style={styles.modalInput}
-              />
-              <TextInput
-                label="Monthly Salary"
-                value={profileData.monthly_salary?.toString() || ''}
-                onChangeText={(text) => setProfileData({...profileData, monthly_salary: parseFloat(text) || 0})}
-                mode="outlined"
-                keyboardType="numeric"
-                style={styles.modalInput}
-              />
-              <TextInput
-                label="Location"
-                value={profileData.location || ''}
-                onChangeText={(text) => setProfileData({...profileData, location: text})}
-                mode="outlined"
-                style={styles.modalInput}
-              />
-              <TextInput
-                label="Mobile Number"
-                value={profileData.mobile_number || ''}
-                onChangeText={(text) => setProfileData({...profileData, mobile_number: text})}
-                mode="outlined"
-                keyboardType="phone-pad"
-                style={styles.modalInput}
-              />
-              <TextInput
-                label="Currency"
-                value={profileData.currency || 'USD'}
-                onChangeText={(text) => setProfileData({...profileData, currency: text})}
-                mode="outlined"
-                style={styles.modalInput}
-              />
-              <TextInput
-                label="Daily Reminder Time (HH:MM)"
-                value={profileData.daily_reminder_time || '09:00'}
-                onChangeText={(text) => setProfileData({...profileData, daily_reminder_time: text})}
-                mode="outlined"
-                style={styles.modalInput}
-                placeholder="09:00"
-              />
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>Monthly Report Email</Text>
-                <Switch
-                  value={profileData.monthly_report_enabled || false}
-                  onValueChange={(value) => setProfileData({...profileData, monthly_report_enabled: value})}
-                />
+        <Modal visible={profileVisible} onDismiss={() => setProfileVisible(false)} contentContainerStyle={styles.modalOverlay}>
+          <Surface style={styles.modal} elevation={10}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Profile Settings</Text>
+              <TouchableOpacity onPress={() => setProfileVisible(false)}>
+                <Text style={styles.closeIcon}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Divider />
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Personal Information</Text>
+                <TextInput label="Full Name" value={profileData.full_name || ''} onChangeText={t => setProfileData(p => ({ ...p, full_name: t }))} mode="outlined" style={styles.field} />
+                <TextInput label="Mobile" value={profileData.mobile_number || ''} onChangeText={t => setProfileData(p => ({ ...p, mobile_number: t }))} mode="outlined" style={styles.field} keyboardType="phone-pad" />
+                <TextInput label="Location" value={profileData.location || ''} onChangeText={t => setProfileData(p => ({ ...p, location: t }))} mode="outlined" style={styles.field} />
               </View>
-              <View style={styles.modalButtons}>
-                <Button 
-                  mode="outlined" 
-                  onPress={() => setProfileVisible(false)} 
-                  style={styles.modalButton}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  mode="contained" 
-                  onPress={updateProfile} 
-                  style={styles.modalButton}
-                >
-                  Save
-                </Button>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Financial Settings</Text>
+                <TextInput label="Monthly Salary" value={profileData.monthly_salary?.toString() || ''} onChangeText={t => setProfileData(p => ({ ...p, monthly_salary: parseFloat(t) || 0 }))} mode="outlined" style={styles.field} keyboardType="numeric" />
+                <TextInput label="Currency" value={profileData.currency || 'USD'} onChangeText={t => setProfileData(p => ({ ...p, currency: t }))} mode="outlined" style={styles.field} />
               </View>
-            </Card.Content>
-          </Card>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Notifications</Text>
+                <TextInput label="Daily Reminder Time" value={profileData.daily_reminder_time || '09:00'} onChangeText={t => setProfileData(p => ({ ...p, daily_reminder_time: t }))} mode="outlined" style={styles.field} />
+                <View style={styles.switchRow}>
+                  <View>
+                    <Text style={styles.switchLabel}>Monthly Report Email</Text>
+                    <Text style={styles.switchDesc}>Receive monthly summary</Text>
+                  </View>
+                  <Switch value={profileData.monthly_report_enabled || false} onValueChange={v => setProfileData(p => ({ ...p, monthly_report_enabled: v }))} />
+                </View>
+              </View>
+
+              <View style={styles.buttons}>
+                <Button mode="outlined" onPress={() => setProfileVisible(false)} style={styles.btn}>Cancel</Button>
+                <Button mode="contained" onPress={updateProfile} style={styles.btn}>Save Changes</Button>
+              </View>
+            </ScrollView>
+          </Surface>
         </Modal>
       </Portal>
     </View>
@@ -300,131 +241,65 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
+  container: { padding: 16, paddingBottom: 40 },
+
+  // Header
+  headerCard: { backgroundColor: '#204ea8fb', borderRadius: 20, padding: 22, marginBottom: 20 },
+  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greeting: { fontSize: 15, color: '#e0e7ff', fontWeight: '500' },
+  userName: { fontSize: 26, color: 'white', fontWeight: 'bold', marginVertical: 4 },
+  subtitle: { fontSize: 14, color: '#c7d2fe' },
+  actions: { flexDirection: 'row', gap: 12 },
+  iconBtn: { backgroundColor: 'rgba(255,255,255,0.18)', padding: 12, borderRadius: 14 },
+  icon: { fontSize: 20, color: 'white' },
+
+  // Chart Card (prevent overflow)
+  chartCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
     padding: 16,
+    marginBottom: 20,
+    // IMPORTANT: keep overflow hidden so chart shadow/dots won't overflow rounded corners
+    overflow: 'hidden',
   },
-  headerCard: {
-    backgroundColor: theme.colors.primary,
-    marginVertical: 8,
-    borderRadius: 12,
-    elevation: 3,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    opacity: 0.9,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
-    minWidth: 80,
-  },
-  headerButtonText: {
-    color: theme.colors.primary,
-    fontSize: 12,
-  },
-  logoutButton: {
-    borderColor: '#FFFFFF',
-    borderRadius: 6,
-    minWidth: 80,
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
+  chartTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', textAlign: 'center', marginBottom: 12 },
+
+  // Chart container now takes full width of card
   chartContainer: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  aiCard: {
-    backgroundColor: '#F8F9FA',
-  },
-  aiContainer: {
-    marginBottom: 10,
-  },
-  aiInput: {
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
   },
-  aiButton: {
-    alignSelf: 'flex-end',
-    minWidth: 100,
-    borderRadius: 8,
-  },
-  responseCard: {
-    marginTop: 15,
-    backgroundColor: '#E8F5E8',
-  },
-  responseText: {
-    lineHeight: 20,
-  },
-  actionsCard: {
-    backgroundColor: '#FFF8E1',
-    marginBottom: 20,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  modal: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 20,
-    borderRadius: 12,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalInput: {
-    marginVertical: 6,
-    backgroundColor: '#FFFFFF',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-    paddingVertical: 8,
-  },
-  switchLabel: {
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '500',
-  },
+
+  legend: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  legendText: { fontSize: 14, color: '#64748b', fontWeight: '600' },
+
+  // AI Card
+  aiCard: { backgroundColor: 'white', borderRadius: 20, padding: 20, marginBottom: 20 },
+  aiTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 16 },
+  inputRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-end' },
+  input: { flex: 1, backgroundColor: '#f8fafc' },
+  sendBtn: { borderRadius: 16 },
+  bubble: { marginTop: 20, backgroundColor: '#eef2ff', padding: 16, borderRadius: 16, borderLeftWidth: 5, borderLeftColor: '#6366f1' },
+  bubbleTitle: { fontSize: 14, fontWeight: 'bold', color: '#4f46e5', marginBottom: 8 },
+  bubbleText: { fontSize: 15, color: '#1e293b', lineHeight: 22 },
+
+  // Modal
+  modalOverlay: { padding: 20, justifyContent: 'center' },
+  modal: { backgroundColor: 'white', borderRadius: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' },
+  closeIcon: { fontSize: 28, color: '#64748b' },
+  modalBody: { paddingHorizontal: 20, paddingBottom: 20 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 13, fontWeight: 'bold', color: '#6366f1', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 },
+  field: { marginBottom: 12, backgroundColor: '#f8fafc' },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 12, marginTop: 8 },
+  switchLabel: { fontSize: 15, fontWeight: '600' },
+  switchDesc: { fontSize: 13, color: '#64748b' },
+  buttons: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  btn: { flex: 1, borderRadius: 14, paddingVertical: 4 },
 });

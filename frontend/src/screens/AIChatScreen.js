@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Image, TouchableOpacity, Alert } from 'react-native';
-import { Card, Title, TextInput, Button, Text, Avatar, IconButton } from 'react-native-paper';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Animated } from 'react-native';
+import { TextInput, Button, Text, Surface } from 'react-native-paper';
 import { aiAPI } from '../services/api';
-import { theme, commonStyles } from '../utils/theme';
+import { commonStyles } from '../utils/theme';
 
-export default function AIChatScreen({ navigation }) {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hello! I'm your AI financial advisor. Ask me anything about your expenses, budgeting, or financial planning.",
-      isBot: true,
-      timestamp: new Date(),
-    }
-  ]);
+export default function AIChatScreen() {
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (scrollViewRef.current && messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!inputText.trim()) return;
@@ -32,7 +35,6 @@ export default function AIChatScreen({ navigation }) {
 
     try {
       const response = await aiAPI.chat({ message: inputText });
-      
       const botMessage = {
         id: Date.now() + 1,
         text: response.data.response,
@@ -40,12 +42,11 @@ export default function AIChatScreen({ navigation }) {
         timestamp: new Date(),
         chartUrl: response.data.chart_url,
       };
-
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       const errorMessage = {
         id: Date.now() + 1,
-        text: "I'm sorry, I'm having trouble responding right now. Please try again later.",
+        text: "I'm having trouble responding. Please try again.",
         isBot: true,
         timestamp: new Date(),
       };
@@ -59,242 +60,305 @@ export default function AIChatScreen({ navigation }) {
     if (Platform.OS === 'web') {
       const link = document.createElement('a');
       link.href = chartUrl;
-      // link.href = `http://localhost:8000`+chartUrl;
-      // console.log("char url .............. ", chartUrl)
-      // console.log('url is _________________ is '+chartUrl);
       link.download = `chart_${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else {
-      Alert.alert('Download', 'Chart download feature coming soon for mobile!');
     }
   };
 
-  const renderMessage = (message) => (
-    <View key={message.id} style={[
-      styles.messageContainer,
-      message.isBot ? styles.botMessage : styles.userMessage
-    ]}>
-      {message.isBot && (
-        <Avatar.Icon
-          size={36}
-          icon="robot"
-          style={styles.avatar}
-        />
-      )}
-      <View style={[
-        styles.messageBubble,
-        message.isBot ? styles.botBubble : styles.userBubble
-      ]}>
-        <Text style={[
-          styles.messageText,
-          message.isBot ? styles.botText : styles.userText
-        ]}>
-          {message.text}
-        </Text>
-        
-        {message.chartUrl && (
-          <View style={styles.chartContainer}>
-            <Image 
-              source={{ uri: message.chartUrl }} 
-              style={styles.chartImage}
-              resizeMode="contain"
-            />
-            <View style={styles.chartActions}>
-              <Text style={styles.chartLabel}>📊 Generated Chart</Text>
-              <IconButton
-                icon="download"
-                size={20}
-                onPress={() => downloadChart(message.chartUrl)}
-                style={styles.downloadButton}
-              />
-            </View>
-          </View>
-        )}
-        
-        <Text style={styles.timestamp}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </View>
-    </View>
-  );
+  const hasMessages = messages.length > 0;
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <Card style={styles.headerCard}>
-        <Card.Content>
-          <Title style={styles.headerTitle}>💬 AI Financial Advisor</Title>
-          <Text style={styles.headerSubtitle}>Get personalized financial insights</Text>
-        </Card.Content>
-      </Card>
-
-      <ScrollView 
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-      >
-        {messages.map(renderMessage)}
-        {loading && (
-          <View style={[styles.messageContainer, styles.botMessage]}>
-            <Avatar.Icon size={36} icon="robot" style={styles.avatar} />
-            <View style={[styles.messageBubble, styles.botBubble]}>
-              <Text style={styles.loadingText}>Thinking...</Text>
+    <View style={commonStyles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {!hasMessages ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🤖</Text>
+            <Text style={styles.emptyTitle}>Financial Assistant</Text>
+            <Text style={styles.emptySubtitle}>Ask me anything about your finances</Text>
+            <View style={styles.suggestionsContainer}>
+              <TouchableOpacity style={styles.suggestionChip} onPress={() => setInputText('How much did I spend this month?')}>
+                <Text style={styles.suggestionText}>💰 Monthly spending</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionChip} onPress={() => setInputText('What are my top expenses?')}>
+                <Text style={styles.suggestionText}>📊 Top expenses</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionChip} onPress={() => setInputText('Show me my income vs expenses')}>
+                <Text style={styles.suggestionText}>📈 Income vs expenses</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionChip} onPress={() => setInputText('Budget recommendations')}>
+                <Text style={styles.suggestionText}>💡 Budget tips</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
-      </ScrollView>
-
-      <Card style={styles.inputCard}>
-        <Card.Content style={styles.inputContainer}>
-          <TextInput
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Ask about your finances..."
-            mode="outlined"
-            multiline
-            style={styles.textInput}
-            onSubmitEditing={sendMessage}
-          />
-          <Button
-            mode="contained"
-            onPress={sendMessage}
-            disabled={!inputText.trim() || loading}
-            style={styles.sendButton}
-            icon="send"
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
           >
-            Send
-          </Button>
-        </Card.Content>
-      </Card>
-    </KeyboardAvoidingView>
+            {messages.map((message) => (
+              <View key={message.id} style={[styles.messageRow, message.isBot ? styles.botRow : styles.userRow]}>
+                {message.isBot && <Text style={styles.botAvatar}>🤖</Text>}
+                <View style={[styles.messageBubble, message.isBot ? styles.botBubble : styles.userBubble]}>
+                  <Text style={[styles.messageText, message.isBot ? styles.botText : styles.userText]}>
+                    {message.text}
+                  </Text>
+                  {message.chartUrl && (
+                    <View style={styles.chartContainer}>
+                      {Platform.OS === 'web' ? (
+                        <img
+                          src={message.chartUrl}
+                          style={styles.chartImage}
+                          alt="Chart"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : null}
+                      <TouchableOpacity
+                        style={styles.downloadBtn}
+                        onPress={() => downloadChart(message.chartUrl)}
+                      >
+                        <Text style={styles.downloadText}>💾 Download</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ))}
+            {loading && (
+              <View style={[styles.messageRow, styles.botRow]}>
+                <Text style={styles.botAvatar}>🤖</Text>
+                <View style={[styles.messageBubble, styles.botBubble]}>
+                  <View style={styles.loadingDots}>
+                    <View style={styles.dot} />
+                    <View style={styles.dot} />
+                    <View style={styles.dot} />
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        )}
+
+        <View style={[styles.inputContainer, hasMessages && styles.inputContainerFixed]}>
+          <Surface style={styles.inputCard} elevation={3}>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Ask about your finances..."
+                mode="flat"
+                multiline
+                maxLength={500}
+                style={styles.textInput}
+                onSubmitEditing={sendMessage}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, (!inputText.trim() || loading) && styles.sendBtnDisabled]}
+                onPress={sendMessage}
+                disabled={!inputText.trim() || loading}
+              >
+                <Text style={styles.sendIcon}>📤</Text>
+              </TouchableOpacity>
+            </View>
+          </Surface>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#fff',
   },
-  headerCard: {
-    margin: 16,
+
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
     marginBottom: 8,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
   },
-  headerTitle: {
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    marginBottom: 32,
+  },
+  suggestionsContainer: {
+    width: '20%',
+    gap: 10,
+  },
+  suggestionChip: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  suggestionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#475569',
     textAlign: 'center',
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
-  headerSubtitle: {
-    textAlign: 'center',
-    color: '#FFFFFF',
-    opacity: 0.9,
-    marginTop: 4,
-  },
+
   messagesContainer: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   messagesContent: {
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 100,
   },
-  messageContainer: {
+
+  messageRow: {
     flexDirection: 'row',
-    marginVertical: 6,
+    marginVertical: 8,
     alignItems: 'flex-end',
+    gap: 8,
   },
-  botMessage: {
+  botRow: {
     justifyContent: 'flex-start',
   },
-  userMessage: {
+  userRow: {
     justifyContent: 'flex-end',
   },
-  avatar: {
-    marginRight: 8,
-    backgroundColor: theme.colors.primary,
+
+  botAvatar: {
+    fontSize: 20,
+    marginBottom: 4,
   },
+
   messageBubble: {
     maxWidth: '75%',
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 16,
-    elevation: 2,
   },
   botBubble: {
-    backgroundColor: '#F0F4F8',
+    backgroundColor: '#f1f5f9',
     borderBottomLeftRadius: 4,
   },
   userBubble: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#6366f1',
     borderBottomRightRadius: 4,
-    alignSelf: 'flex-end',
   },
+
   messageText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   botText: {
-    color: '#333',
+    color: '#1e293b',
   },
   userText: {
-    color: '#FFFFFF',
+    color: '#fff',
   },
+
   chartContainer: {
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 8,
     overflow: 'hidden',
   },
   chartImage: {
     width: '100%',
-    height: 200,
-    backgroundColor: '#FFFFFF',
+    height: 250,
+    objectFit: 'contain',
+    backgroundColor: '#fff',
+    borderRadius: 8,
   },
-  chartActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  downloadBtn: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+  },
+  downloadText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366f1',
+  },
+
+  loadingDots: {
+    flexDirection: 'row',
+    gap: 4,
+    paddingVertical: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#6366f1',
+  },
+
+  inputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'transparent',
+  },
+  inputContainerFixed: {
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: '#eff7feff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingBottom: 12,
+  },
+
+  inputCard: {
+    backgroundColor: '#eff7feff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d4e5fcff',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  chartLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  downloadButton: {
-    margin: 0,
-  },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 6,
-    opacity: 0.7,
-  },
-  loadingText: {
-    fontStyle: 'italic',
-    color: '#666',
-  },
-  inputCard: {
-    margin: 16,
-    marginTop: 8,
-    borderRadius: 12,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
   textInput: {
     flex: 1,
-    maxHeight: 100,
-    backgroundColor: '#FFFFFF',
+    maxHeight: 80,
+    backgroundColor: '#eff7feff',
+    fontSize: 13,
+    minHeight: 36,
+    borderRadius: 12,
   },
-  sendButton: {
-    alignSelf: 'flex-end',
-    borderRadius: 8,
+  sendBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#af80e4ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#cbd5e1',
+  },
+  sendIcon: {
+    fontSize: 16,
   },
 });

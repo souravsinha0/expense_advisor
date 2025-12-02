@@ -58,13 +58,14 @@ async def get_ai_response(message: str, user_id: int, db: Session) -> str:
     """
     
     try:
-        async with httpx.AsyncClient(timeout=240.0) as client:
+        async with httpx.AsyncClient(timeout=420.0) as client:
             print(f"Using OLLAMA_BASE_URL: {settings.OLLAMA_BASE_URL}")
             response = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json={
                     #"model": "llama2",
-                    "model": "hf.co/nkamiy/gemma3-4b-it-gguf:Q5_K_M",
+                    # "model": "hf.co/nkamiy/gemma3-4b-it-gguf:Q5_K_M",
+                    "model": "gemma3:1b",
                     "prompt": prompt,
                     "stream": False
                 }
@@ -163,8 +164,10 @@ async def generate_chart(message: str, user_id: int, db: Session) -> str:
         plt.close()
 
         print(f"Chart saved: {filepath}")
-        return f"{settings.SERVER_BASE_URL}/serve-files/{filename}"
-        # return filepath.as_posix()
+        # Use both routes for compatibility
+        chart_url = f"{settings.SERVER_BASE_URL}/serve-files/{filename}"
+        print(f"Chart URL generated: {chart_url}")
+        return chart_url
 
     except Exception as e:
         print(f"Chart generation failed: {e}")

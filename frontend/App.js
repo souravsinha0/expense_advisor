@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
-import BottomTabNavigator from './src/components/BottomTabNavigator';
+import SideTabNavigator from './src/components/BottomTabNavigator';
 import { theme } from './src/utils/theme';
 
 // Import screens directly
@@ -68,21 +68,21 @@ function AppContent() {
     return <LoginScreen navigation={navigation} />;
   }
 
-  // Main app screens with tabs
+  // Main app screens with side navigation
   return (
-    <View style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <View style={{ flex: 1, width: '100%', overflow: 'hidden', minHeight: 0 }}>
+    <View style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
+      {isMainApp && (
+        <SideTabNavigator 
+          currentTab={currentTab} 
+          onTabChange={setCurrentTab}
+        />
+      )}
+      <View style={{ flex: 1, marginLeft: isMainApp ? 80 : 0, overflow: 'hidden' }}>
         {currentTab === 'dashboard' && <DashboardScreen navigation={navigation} />}
         {currentTab === 'calendar' && <CalendarScreen navigation={navigation} />}
         {currentTab === 'reports' && <ReportsScreen navigation={navigation} />}
         {currentTab === 'aiChat' && <AIChatScreen navigation={navigation} />}
       </View>
-      {isMainApp && (
-        <BottomTabNavigator 
-          currentTab={currentTab} 
-          onTabChange={setCurrentTab}
-        />
-      )}
     </View>
   );
 }

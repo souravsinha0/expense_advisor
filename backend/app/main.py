@@ -25,8 +25,9 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 REPORT_DIR = os.path.join(os.path.dirname(__file__), "static", "reports")
 os.makedirs(REPORT_DIR, exist_ok=True)
 
-app.mount("/app/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/app/static/reports", StaticFiles(directory=REPORT_DIR), name="reports")
+# Mount static files with proper CORS headers
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static/reports", StaticFiles(directory=REPORT_DIR), name="reports")
 
 
 app.add_middleware(
