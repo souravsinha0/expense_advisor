@@ -151,9 +151,21 @@ export default function AIChatScreen() {
                 placeholder="Ask about your finances..."
                 mode="flat"
                 multiline
-                maxLength={500}
+                maxLength={1000}
                 style={styles.textInput}
-                onSubmitEditing={sendMessage}
+                onKeyPress={(e) => {
+                  const { key, ctrlKey, metaKey, shiftKey } = e.nativeEvent;
+
+                  if (key === 'Enter' && !shiftKey && (ctrlKey || metaKey)) {
+                    e.preventDefault();
+                    if (inputText.trim()) {
+                      sendMessage();
+                    }
+                  }
+                }}
+                underlineColorAndroid="transparent"
+                selectionColor="#6366f1"
+                theme={{ colors: { primary: '#6366f1' } }}
               />
               <TouchableOpacity
                 style={[styles.sendBtn, (!inputText.trim() || loading) && styles.sendBtnDisabled]}
@@ -277,7 +289,7 @@ const styles = StyleSheet.create({
   },
   chartImage: {
     width: '100%',
-    height: 250,
+    height: 350,
     objectFit: 'contain',
     backgroundColor: '#fff',
     borderRadius: 8,
