@@ -25,7 +25,31 @@ AI-powered personal expense tracking application with web and mobile support. Tr
 
 ## 📱 Screenshots
 
-*Coming soon...*
+
+![alt text](<login screen.jpg>)
+Login Screen
+
+![alt text](<profile setup.jpg>)
+Profile Settings Screen
+
+![alt text](dahsboard.jpg)
+Dashboard Screen
+
+![alt text](<calendar screen.jpg>)
+Calendar Screen
+
+![alt text](<reports screen.jpg>)
+Reports Screen
+
+![alt text](<AI Chat Screen with Graph.jpg>)
+AI Chat Screen
+
+![alt text](<generated report in excel.jpg>)
+Generated Excel Report
+
+![alt text](<generated report in pdf.jpg>)
+Generated PDF Report
+
 
 ## 🏗️ Architecture
 
