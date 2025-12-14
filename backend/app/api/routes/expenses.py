@@ -128,3 +128,45 @@ async def get_dashboard_stats(
         })
     
     return {"months": months_data}
+
+@router.put("/{expense_id}", response_model=ExpenseResponse)
+async def update_expense(
+    expense_id: int,
+    expense: ExpenseCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_expense = db.query(Expense).filter(
+        Expense.id == expense_id,
+        Expense.user_id == current_user.id
+    ).first()
+    
+    if not db_expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    db_expense.details = expense.details
+    db_expense.amount = expense.amount
+    db_expense.transaction_type = expense.transaction_type.value.lower()
+    db_expense.transaction_date = expense.transaction_date
+    
+    db.commit()
+    db.refresh(db_expense)
+    return db_expense
+
+@router.delete("/{expense_id}")
+async def delete_expense(
+    expense_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_expense = db.query(Expense).filter(
+        Expense.id == expense_id,
+        Expense.user_id == current_user.id
+    ).first()
+    
+    if not db_expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    db.delete(db_expense)
+    db.commit()
+    return {"message": "Expense deleted successfully"}

@@ -118,3 +118,19 @@ expo build:ios
 - Monitor resource usage
 - Regular database backups
 - Update dependencies regularly
+
+
+
+### 4. Render.com Deployment
+
+1. **Create Web Service**
+   - Connect GitHub repository
+   - Build Command: `cd backend && pip install -r requirements.txt`
+   - Start Command: `cd backend && python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+2. **Environment Variables**
+   Add all variables from your `.env` file to Render dashboard
+
+3. **Static Files**
+   - Add build command: `cd frontend && npm install && npm run build`
+   - Serve frontend from backend static files

@@ -7,9 +7,10 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    DB_TYPE: str = "postgresql"  # postgresql or sqlite
+    POSTGRES_USER: str = ""
+    POSTGRES_PASSWORD: str = ""
+    POSTGRES_DB: str = ""
     
     # Security
     SECRET_KEY: str
@@ -22,8 +23,11 @@ class Settings(BaseSettings):
     SMTP_USER: str
     SMTP_PASSWORD: str
     
-    # Ollama
-    OLLAMA_BASE_URL: str
+    # LLM Configuration
+    LLM_PROVIDER: str = "ollama"  # ollama, openai, gemini
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     
     # File Retention
     FILE_RETENTION_DAYS: int = 7

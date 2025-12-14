@@ -27,6 +27,8 @@ export default function CalendarScreen({ navigation }) {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editForm, setEditForm] = useState({ details: '', amount: '', transaction_type: 'debit' });
+  const [dailyTotal, setDailyTotal] = useState({ credit: 0, debit: 0, net: 0 });
+  const [monthlyTotal, setMonthlyTotal] = useState({ credit: 0, debit: 0, net: 0 });
 
   const months = [
     { label: 'January', value: 1 }, { label: 'February', value: 2 }, { label: 'March', value: 3 },
@@ -58,6 +60,11 @@ export default function CalendarScreen({ navigation }) {
         expense.transaction_date.startsWith(day.dateString)
       );
       setDayExpenses(dateExpenses);
+      
+      // Calculate daily totals
+      const dayCredit = dateExpenses.filter(e => e.transaction_type === 'credit').reduce((sum, e) => sum + e.amount, 0);
+      const dayDebit = dateExpenses.filter(e => e.transaction_type === 'debit').reduce((sum, e) => sum + e.amount, 0);
+      setDailyTotal({ credit: dayCredit, debit: dayDebit, net: dayCredit - dayDebit });
     } catch (error) {
       console.error('Error loading day expenses:', error);
     }
@@ -67,6 +74,11 @@ export default function CalendarScreen({ navigation }) {
     try {
       const response = await expenseAPI.getExpenses(selectedYear, selectedMonth);
       setMonthlyExpenses(response.data);
+      
+      // Calculate monthly totals
+      const monthCredit = response.data.filter(e => e.transaction_type === 'credit').reduce((sum, e) => sum + e.amount, 0);
+      const monthDebit = response.data.filter(e => e.transaction_type === 'debit').reduce((sum, e) => sum + e.amount, 0);
+      setMonthlyTotal({ credit: monthCredit, debit: monthDebit, net: monthCredit - monthDebit });
     } catch (error) {
       console.error('Error loading monthly expenses:', error);
     }
@@ -146,15 +158,20 @@ export default function CalendarScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await expenseAPI.delete(expenseId);
+              console.log('Deleting expense with ID:', expenseId);
+              const response = await expenseAPI.delete(expenseId);
+              console.log('Delete response:', response);
               Alert.alert('✅ Success', 'Expense deleted successfully');
-              if (selectedDate) {
+              
+              // Reload data
+              if (viewMode === 'day' && selectedDate) {
                 handleDateSelect({ dateString: selectedDate });
               } else {
                 loadMonthlyExpenses();
               }
             } catch (error) {
               console.error('Delete error:', error);
+              console.error('Error details:', error.response?.data);
               Alert.alert('❌ Error', 'Failed to delete expense');
             }
           }
@@ -445,13 +462,45 @@ export default function CalendarScreen({ navigation }) {
                 {viewMode === 'day' ? 'Daily transactions' : 'Monthly overview'}
               </Text>
             </View>
-            <Chip 
-              style={styles.countChip}
-              textStyle={styles.countChipText}
-            >
-              {viewMode === 'day' ? dayExpenses.length : monthlyExpenses.length}
-            </Chip>
+            <View style={styles.headerRight}>
+              <Chip 
+                style={styles.countChip}
+                textStyle={styles.countChipText}
+              >
+                {viewMode === 'day' ? dayExpenses.length : monthlyExpenses.length}
+              </Chip>
+            </View>
           </View>
+          
+          {/* Total Summary */}
+          {(viewMode === 'day' && selectedDate) || viewMode === 'month' ? (
+            <View style={styles.totalSummary}>
+              <View style={styles.totalRow}>
+                <View style={styles.totalItem}>
+                  <Text style={styles.totalLabel}>💰 Income</Text>
+                  <Text style={[styles.totalAmount, styles.incomeAmount]}>
+                    ₹{viewMode === 'day' ? dailyTotal.credit.toFixed(2) : monthlyTotal.credit.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.totalItem}>
+                  <Text style={styles.totalLabel}>💸 Expenses</Text>
+                  <Text style={[styles.totalAmount, styles.expenseAmount]}>
+                    ₹{viewMode === 'day' ? dailyTotal.debit.toFixed(2) : monthlyTotal.debit.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.totalItem}>
+                  <Text style={styles.totalLabel}>📊 Net</Text>
+                  <Text style={[
+                    styles.totalAmount, 
+                    styles.netAmount,
+                    { color: (viewMode === 'day' ? dailyTotal.net : monthlyTotal.net) >= 0 ? '#4CAF50' : '#F44336' }
+                  ]}>
+                    ₹{viewMode === 'day' ? dailyTotal.net.toFixed(2) : monthlyTotal.net.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
           
           <Divider style={styles.entriesDivider} />
           
@@ -739,6 +788,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  headerRight: {
+    alignItems: 'flex-end',
+  },
   entriesTitle: {
     fontSize: 14,
     fontWeight: '700',
@@ -925,5 +977,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+
+  /* ===== TOTAL SUMMARY ===== */
+  totalSummary: {
+    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(200, 200, 200, 0.1)',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  totalAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  incomeAmount: {
+    color: '#4CAF50',
+  },
+  expenseAmount: {
+    color: '#F44336',
+  },
+  netAmount: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
