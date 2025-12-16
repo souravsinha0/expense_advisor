@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Dimensions, Animated, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Card, Title, TextInput, Button, SegmentedButtons, Text, Chip, Surface, Divider, Portal } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -8,7 +8,7 @@ import { expenseAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { theme, commonStyles } from '../utils/theme';
 
-const screenWidth = Dimensions.get('window').width;
+const { width: windowWidth } = Dimensions.get('window');
 
 export default function CalendarScreen({ navigation }) {
   const { user } = useAuth();
@@ -55,13 +55,11 @@ export default function CalendarScreen({ navigation }) {
         new Date(day.dateString).getMonth() + 1
       );
       
-      // Filter expenses for selected date
       const dateExpenses = response.data.filter(expense => 
         expense.transaction_date.startsWith(day.dateString)
       );
       setDayExpenses(dateExpenses);
       
-      // Calculate daily totals
       const dayCredit = dateExpenses.filter(e => e.transaction_type === 'credit').reduce((sum, e) => sum + e.amount, 0);
       const dayDebit = dateExpenses.filter(e => e.transaction_type === 'debit').reduce((sum, e) => sum + e.amount, 0);
       setDailyTotal({ credit: dayCredit, debit: dayDebit, net: dayCredit - dayDebit });
@@ -75,7 +73,6 @@ export default function CalendarScreen({ navigation }) {
       const response = await expenseAPI.getExpenses(selectedYear, selectedMonth);
       setMonthlyExpenses(response.data);
       
-      // Calculate monthly totals
       const monthCredit = response.data.filter(e => e.transaction_type === 'credit').reduce((sum, e) => sum + e.amount, 0);
       const monthDebit = response.data.filter(e => e.transaction_type === 'debit').reduce((sum, e) => sum + e.amount, 0);
       setMonthlyTotal({ credit: monthCredit, debit: monthDebit, net: monthCredit - monthDebit });
@@ -100,11 +97,9 @@ export default function CalendarScreen({ navigation }) {
       
       setNewExpense({ details: '', amount: '', transaction_type: 'debit' });
       alert('Expense added successfully');
-      
-      // Reload expenses for selected date
       handleDateSelect({ dateString: selectedDate });
     } catch (error) {
-      Alert.alert( 'Failed to add expense');
+      Alert.alert('Failed to add expense');
     } finally {
       setLoading(false);
     }
@@ -148,62 +143,22 @@ export default function CalendarScreen({ navigation }) {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    Alert.alert(
-      '🗑️ Delete Expense',
-      'Are you sure you want to delete this expense?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Deleting expense with ID:', expenseId);
-              const response = await expenseAPI.delete(expenseId);
-              console.log('Delete response:', response);
-              Alert.alert('✅ Success', 'Expense deleted successfully');
-              
-              // Reload data
-              if (viewMode === 'day' && selectedDate) {
-                handleDateSelect({ dateString: selectedDate });
-              } else {
-                loadMonthlyExpenses();
-              }
-            } catch (error) {
-              console.error('Delete error:', error);
-              console.error('Error details:', error.response?.data);
-              Alert.alert('❌ Error', 'Failed to delete expense');
-            }
-          }
+    if (window.confirm('Are you sure you want to delete this expense?')) {
+      try {
+        await expenseAPI.delete(expenseId);
+        alert('Expense deleted successfully');
+        
+        if (viewMode === 'day' && selectedDate) {
+          handleDateSelect({ dateString: selectedDate });
+        } else {
+          loadMonthlyExpenses();
         }
-      ]
-    );
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete expense');
+      }
+    }
   };
-
-  // const renderExpenseItem = (expense) => (
-  //   <View key={expense.id} style={styles.expenseItem}>
-  //     <View style={styles.expenseInfo}>
-  //       <Text style={styles.expenseDetails}>{expense.details}</Text>
-  //       <Text style={styles.expenseDate}>
-  //         {new Date(expense.transaction_date).toLocaleDateString()}
-  //       </Text>
-  //     </View>
-  //     <View style={styles.expenseActions}>
-  //       <Text style={[
-  //         styles.expenseAmount,
-  //         { color: expense.transaction_type === 'credit' ? theme.colors.income : theme.colors.expense }
-  //       ]}>
-  //         {expense.transaction_type === 'credit' ? '+' : '-'}{expense.amount} {user?.currency || 'USD'}
-  //       </Text>
-  //       <IconButton
-  //         icon="delete"
-  //         size={18}
-  //         onPress={() => handleDeleteExpense(expense.id)}
-  //         style={styles.deleteButton}
-  //       />
-  //     </View>
-  //   </View>
-  // );
 
   const renderExpenseItem = (expenses = []) => {
     if (!Array.isArray(expenses)) return null;
@@ -212,7 +167,7 @@ export default function CalendarScreen({ navigation }) {
       (a, b) => new Date(b.transaction_date) - new Date(a.transaction_date)
     );
 
-    return sorted.map((expense, index) => (
+    return sorted.map((expense) => (
       <Surface key={`${expense.id}-${expense.transaction_date}`} style={styles.expenseCard} elevation={2}>
         <View style={styles.expenseContent}>
           <View style={[
@@ -223,7 +178,7 @@ export default function CalendarScreen({ navigation }) {
           <View style={styles.expenseInfo}>
             <Text style={styles.expenseDetails}>{expense.details}</Text>
             <Text style={styles.expenseDate}>
-              📅 {new Date(expense.transaction_date).toLocaleDateString('en-US', {
+              {new Date(expense.transaction_date).toLocaleDateString('en-US', {
                 weekday: 'short',
                 month: 'short', 
                 day: 'numeric'
@@ -234,7 +189,7 @@ export default function CalendarScreen({ navigation }) {
           <View style={styles.expenseActions}>
             <View style={styles.amountContainer}>
               <Text style={styles.amountSymbol}>
-                {expense.transaction_type === 'credit' ? '💰' : '💸'}
+                {expense.transaction_type === 'credit' ? 'Income' : 'Expense'}
               </Text>
               <Text style={[
                 styles.expenseAmount,
@@ -252,14 +207,14 @@ export default function CalendarScreen({ navigation }) {
                 style={styles.editButton}
                 onPress={() => handleEditExpense(expense)}
               >
-                <Text style={styles.editIcon}>✏️</Text>
+                <Text style={styles.editIcon}>Edit</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.deleteButton}
                 onPress={() => handleDeleteExpense(expense.id)}
               >
-                <Text style={styles.deleteIcon}>🗑️</Text>
+                <Text style={styles.deleteIcon}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -268,77 +223,79 @@ export default function CalendarScreen({ navigation }) {
     ));
   };
 
-
+  const isLargeScreen = windowWidth > 900;
 
   return (
     <View style={commonStyles.container}>
-      <ScrollView style={commonStyles.centeredContent} showsVerticalScrollIndicator={false}>
-        {/* ===== Professional Header ===== */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* Header with Tabs */}
         <Surface style={styles.headerCard} elevation={2}>
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.headerSubtitle}>Expense Management</Text>
-              <Text style={styles.headerTitle}>Calendar & Entries</Text>
-            </View>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>Expense Management</Text>
+            <Text style={styles.headerTitle}>Calendar & Entries</Text>
+          </View>
+          <View style={styles.tabsContainer}>
             <SegmentedButtons
               value={viewMode}
               onValueChange={setViewMode}
               buttons={[
-                { value: 'day', label: '📅 Daily', },
-                { value: 'month', label: '📊 Monthly', }
+                { value: 'day', label: 'Daily' },
+                { value: 'month', label: 'Monthly' }
               ]}
               style={styles.segmentedButtons}
-              density="small"
+              density="medium"
             />
           </View>
         </Surface>
 
-        {/* ===== Calendar & Form Section ===== */}
-        <View style={styles.contentGrid}>
+        {/* Main Content Grid */}
+        <View style={[styles.contentGrid, isLargeScreen && styles.contentGridRow]}>
+          
           {/* Calendar Card */}
-          <Surface style={styles.calendarCard} elevation={2}>
+          <Surface style={[styles.calendarCard, isLargeScreen && styles.calendarCardLarge]} elevation={2}>
             <View style={styles.cardHeader}>
               <MaterialCommunityIcons name="calendar-month" size={18} color="#1976D2" />
               <Text style={styles.cardTitle}>Select Date</Text>
             </View>
             <Divider style={styles.cardDivider} />
-            <Calendar
-              onDayPress={handleDateSelect}
-              markedDates={{
-                [selectedDate]: { 
-                  selected: true, 
-                  selectedColor: '#1976D2',
-                  selectedTextColor: '#FFFFFF'
-                }
-              }}
-              theme={{
-                backgroundColor: '#fff',
-                calendarBackground: '#fff',
-                textSectionTitleColor: '#1976D2',
-                selectedDayBackgroundColor: '#1976D2',
-                selectedDayTextColor: '#FFFFFF',
-                todayTextColor: '#1976D2',
-                dayTextColor: '#333',
-                textDisabledColor: '#ccc',
-                dotColor: '#1976D2',
-                selectedDotColor: '#FFFFFF',
-                arrowColor: '#1976D2',
-                monthTextColor: '#1976D2',
-                indicatorColor: '#1976D2',
-                textDayFontWeight: '500',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '600',
-                textDayFontSize: 14,
-                textMonthFontSize: 16,
-                textDayHeaderFontSize: 13
-              }}
-              style={styles.calendar}
-            />
+            <View style={styles.calendarWrapper}>
+              <Calendar
+                onDayPress={handleDateSelect}
+                markedDates={{
+                  [selectedDate]: { 
+                    selected: true, 
+                    selectedColor: '#1976D2',
+                    selectedTextColor: '#FFFFFF'
+                  }
+                }}
+                theme={{
+                  backgroundColor: '#fff',
+                  calendarBackground: '#fff',
+                  textSectionTitleColor: '#1976D2',
+                  selectedDayBackgroundColor: '#1976D2',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#1976D2',
+                  dayTextColor: '#333',
+                  textDisabledColor: '#ccc',
+                  dotColor: '#1976D2',
+                  selectedDotColor: '#FFFFFF',
+                  arrowColor: '#1976D2',
+                  monthTextColor: '#1976D2',
+                  textDayFontWeight: '500',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 13
+                }}
+              />
+            </View>
           </Surface>
 
-          {/* Entry Form Card */}
+          {/* Add Entry Form */}
           {selectedDate && (
-            <Surface style={styles.formCard} elevation={2}>
+            <Surface style={[styles.formCard, isLargeScreen && styles.formCardLarge]} elevation={2}>
               <View style={styles.cardHeader}>
                 <MaterialCommunityIcons name="plus-circle" size={18} color="#4CAF50" />
                 <Text style={styles.cardTitle}>Add Entry</Text>
@@ -346,7 +303,6 @@ export default function CalendarScreen({ navigation }) {
               <Divider style={styles.cardDivider} />
               
               <View style={styles.formContent}>
-                {/* Selected Date Badge */}
                 <View style={styles.dateSelection}>
                   <MaterialCommunityIcons name="calendar-check" size={16} color="#1976D2" />
                   <View style={styles.dateTextContainer}>
@@ -362,7 +318,6 @@ export default function CalendarScreen({ navigation }) {
                   </View>
                 </View>
 
-                {/* Description Input */}
                 <TextInput
                   label="Description"
                   value={newExpense.details}
@@ -373,7 +328,6 @@ export default function CalendarScreen({ navigation }) {
                   left={<TextInput.Icon icon="note-edit" />}
                 />
 
-                {/* Amount Input */}
                 <TextInput
                   label="Amount"
                   value={newExpense.amount}
@@ -385,18 +339,16 @@ export default function CalendarScreen({ navigation }) {
                   left={<TextInput.Icon icon="currency-inr" />}
                 />
 
-                {/* Transaction Type */}
                 <SegmentedButtons
                   value={newExpense.transaction_type}
                   onValueChange={(value) => setNewExpense({...newExpense, transaction_type: value})}
                   buttons={[
-                    { value: 'credit', label: '💰 Income', },
-                    { value: 'debit', label: '💸 Expense', }
+                    { value: 'credit', label: 'Income' },
+                    { value: 'debit', label: 'Expense' }
                   ]}
                   style={styles.typeButtons}
                 />
 
-                {/* Add Button */}
                 <Button
                   mode="contained"
                   onPress={handleAddExpense}
@@ -404,14 +356,14 @@ export default function CalendarScreen({ navigation }) {
                   style={styles.addBtn}
                   labelStyle={styles.addBtnLabel}
                 >
-                  <MaterialCommunityIcons name="plus" size={18} color="#fff" /> Add Entry
+                  Add Entry
                 </Button>
               </View>
             </Surface>
           )}
         </View>
 
-        {/* ===== Month/Year Selector (Monthly View) ===== */}
+        {/* Month/Year Picker - Only in Monthly View */}
         {viewMode === 'month' && (
           <Surface style={styles.monthSelectorCard} elevation={2}>
             <View style={styles.cardHeader}>
@@ -448,7 +400,7 @@ export default function CalendarScreen({ navigation }) {
           </Surface>
         )}
 
-        {/* ===== Entries List ===== */}
+        {/* Entries List */}
         <Surface style={styles.entriesCard} elevation={2}>
           <View style={styles.entriesHeader}>
             <View>
@@ -462,53 +414,46 @@ export default function CalendarScreen({ navigation }) {
                 {viewMode === 'day' ? 'Daily transactions' : 'Monthly overview'}
               </Text>
             </View>
-            <View style={styles.headerRight}>
-              <Chip 
-                style={styles.countChip}
-                textStyle={styles.countChipText}
-              >
-                {viewMode === 'day' ? dayExpenses.length : monthlyExpenses.length}
-              </Chip>
-            </View>
+            <Chip style={styles.countChip} textStyle={styles.countChipText}>
+              {viewMode === 'day' ? dayExpenses.length : monthlyExpenses.length}
+            </Chip>
           </View>
-          
-          {/* Total Summary */}
+
+          {/* Totals */}
           {(viewMode === 'day' && selectedDate) || viewMode === 'month' ? (
             <View style={styles.totalSummary}>
               <View style={styles.totalRow}>
                 <View style={styles.totalItem}>
-                  <Text style={styles.totalLabel}>💰 Income</Text>
+                  <Text style={styles.totalLabel}>Income</Text>
                   <Text style={[styles.totalAmount, styles.incomeAmount]}>
-                    ₹{viewMode === 'day' ? dailyTotal.credit.toFixed(2) : monthlyTotal.credit.toFixed(2)}
+                    ₹{(viewMode === 'day' ? dailyTotal.credit : monthlyTotal.credit).toFixed(2)}
                   </Text>
                 </View>
                 <View style={styles.totalItem}>
-                  <Text style={styles.totalLabel}>💸 Expenses</Text>
+                  <Text style={styles.totalLabel}>Expenses</Text>
                   <Text style={[styles.totalAmount, styles.expenseAmount]}>
-                    ₹{viewMode === 'day' ? dailyTotal.debit.toFixed(2) : monthlyTotal.debit.toFixed(2)}
+                    ₹{(viewMode === 'day' ? dailyTotal.debit : monthlyTotal.debit).toFixed(2)}
                   </Text>
                 </View>
                 <View style={styles.totalItem}>
-                  <Text style={styles.totalLabel}>📊 Net</Text>
+                  <Text style={styles.totalLabel}>Net</Text>
                   <Text style={[
                     styles.totalAmount, 
                     styles.netAmount,
                     { color: (viewMode === 'day' ? dailyTotal.net : monthlyTotal.net) >= 0 ? '#4CAF50' : '#F44336' }
                   ]}>
-                    ₹{viewMode === 'day' ? dailyTotal.net.toFixed(2) : monthlyTotal.net.toFixed(2)}
+                    ₹{(viewMode === 'day' ? dailyTotal.net : monthlyTotal.net).toFixed(2)}
                   </Text>
                 </View>
               </View>
             </View>
           ) : null}
-          
+
           <Divider style={styles.entriesDivider} />
-          
+
           <View style={styles.entriesList}>
             {viewMode === 'day' ? (
-              dayExpenses.length > 0 ? (
-                renderExpenseItem(dayExpenses)
-              ) : (
+              dayExpenses.length > 0 ? renderExpenseItem(dayExpenses) : (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="inbox-outline" size={48} color="#CCC" />
                   <Text style={styles.emptyStateText}>No entries for this date</Text>
@@ -516,9 +461,7 @@ export default function CalendarScreen({ navigation }) {
                 </View>
               )
             ) : (
-              monthlyExpenses.length > 0 ? (
-                renderExpenseItem(monthlyExpenses)
-              ) : (
+              monthlyExpenses.length > 0 ? renderExpenseItem(monthlyExpenses) : (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="chart-box-outline" size={48} color="#CCC" />
                   <Text style={styles.emptyStateText}>No entries for this month</Text>
@@ -528,28 +471,19 @@ export default function CalendarScreen({ navigation }) {
             )}
           </View>
         </Surface>
-        
-        {/* ===== Edit Entry Modal ===== */}
+
+        {/* Edit Modal */}
         <Portal>
-          <Modal
-            visible={editModalVisible}
-            onDismiss={() => setEditModalVisible(false)}
-            contentContainerStyle={styles.modalContainer}
-          >
+          <Modal visible={editModalVisible} onDismiss={() => setEditModalVisible(false)} contentContainerStyle={styles.modalContainer}>
             <Surface style={styles.modalContent} elevation={5}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Entry</Text>
-                <TouchableOpacity 
-                  onPress={() => setEditModalVisible(false)}
-                  style={styles.closeBtn}
-                >
+                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
               </View>
-              
               <Divider style={styles.modalHeaderDivider} />
-              
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScrollContent}>
+              <ScrollView style={styles.modalScrollContent}>
                 <TextInput
                   label="Description"
                   value={editForm.details}
@@ -558,7 +492,6 @@ export default function CalendarScreen({ navigation }) {
                   style={styles.modalInput}
                   left={<TextInput.Icon icon="note-edit" />}
                 />
-                
                 <TextInput
                   label="Amount"
                   value={editForm.amount}
@@ -568,32 +501,20 @@ export default function CalendarScreen({ navigation }) {
                   style={styles.modalInput}
                   left={<TextInput.Icon icon="currency-inr" />}
                 />
-                
                 <SegmentedButtons
                   value={editForm.transaction_type}
                   onValueChange={(value) => setEditForm({...editForm, transaction_type: value})}
                   buttons={[
-                    { value: 'credit', label: '💰 Income' },
-                    { value: 'debit', label: '💸 Expense' }
+                    { value: 'credit', label: 'Income' },
+                    { value: 'debit', label: 'Expense' }
                   ]}
                   style={styles.modalSegmented}
                 />
-
                 <View style={styles.modalActions}>
-                  <Button 
-                    mode="outlined" 
-                    onPress={() => setEditModalVisible(false)}
-                    style={styles.modalButton}
-                    labelStyle={styles.modalButtonLabel}
-                  >
+                  <Button mode="outlined" onPress={() => setEditModalVisible(false)} style={styles.modalButton}>
                     Cancel
                   </Button>
-                  <Button 
-                    mode="contained" 
-                    onPress={handleUpdateExpense}
-                    style={styles.modalButton}
-                    labelStyle={styles.modalButtonLabel}
-                  >
+                  <Button mode="contained" onPress={handleUpdateExpense} style={styles.modalButton}>
                     Save
                   </Button>
                 </View>
@@ -607,20 +528,28 @@ export default function CalendarScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  /* ===== HEADER STYLES ===== */
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+
+  // Header
   headerCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(25, 118, 210, 0.08)',
-  },
-  headerContent: {
+    padding: 20,
+    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(25, 118, 210, 0.08)',
+  },
+  headerLeft: {
+    flex: 1,
+    minWidth: 200,
   },
   headerSubtitle: {
     fontSize: 12,
@@ -630,44 +559,53 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 8,
+    marginTop: 4,
+  },
+  tabsContainer: {
+    alignItems: 'flex-end',
   },
   segmentedButtons: {
-    flex: 1,
-    minWidth: 200,
+    width: 260,
   },
 
-  /* ===== CONTENT GRID ===== */
+  // Grid
   contentGrid: {
-    flexDirection: screenWidth > 800 ? 'row' : 'column',
+    flexDirection: 'column',
     gap: 16,
-    marginBottom: 18,
+    marginBottom: 20,
+  },
+  contentGridRow: {
+    flexDirection: 'row',
   },
 
-  /* ===== CALENDAR CARD ===== */
   calendarCard: {
-    flex: screenWidth > 800 ? 1 : undefined,
     backgroundColor: '#fff',
     borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(25, 118, 210, 0.08)',
-    overflow: 'hidden',
   },
-  calendar: {
+  calendarCardLarge: {
+    flex: 1,
+    marginRight: 8,
+  },
+  calendarWrapper: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingBottom: 12,
   },
 
-  /* ===== FORM CARD ===== */
   formCard: {
-    flex: screenWidth > 800 ? 1 : undefined,
     backgroundColor: '#fff',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.08)',
+  },
+  formCardLarge: {
+    flex: 1,
+    marginLeft: 8,
   },
 
   cardHeader: {
@@ -676,29 +614,29 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    backgroundColor: 'rgba(25, 118, 210, 0.03)',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1A1A1A',
   },
   cardDivider: {
-    backgroundColor: 'rgba(200, 200, 200, 0.1)',
+    backgroundColor: 'rgba(200, 200, 200, 0.15)',
   },
 
   formContent: {
     padding: 16,
-    gap: 12,
+    gap: 14,
   },
   dateSelection: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(25, 118, 210, 0.05)',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(25, 118, 210, 0.1)',
-    marginBottom: 8,
   },
   dateTextContainer: {
     marginLeft: 10,
@@ -709,71 +647,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#999',
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
   },
   dateValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1976D2',
     marginTop: 2,
   },
-
   input: {
     backgroundColor: '#fafafa',
-    fontSize: 14,
-    height: 48,
   },
   typeButtons: {
-    marginTop: 4,
-    marginBottom: 4,
+    marginVertical: 8,
   },
   addBtn: {
     backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    height: 44,
-    justifyContent: 'center',
-    marginTop: 8,
+    borderRadius: 12,
+    paddingVertical: 4,
   },
   addBtnLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
 
-  /* ===== MONTH SELECTOR ===== */
+  // Month Selector
   monthSelectorCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(25, 118, 210, 0.08)',
-    marginBottom: 18,
+    marginBottom: 20,
   },
   pickerContainer: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    padding: 16,
+    gap: 16,
   },
   pickerWrapper: {
     flex: 1,
   },
   pickerLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1976D2',
+    marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
   },
   picker: {
     backgroundColor: '#fafafa',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(200, 200, 200, 0.2)',
-    height: 44,
   },
 
-  /* ===== ENTRIES LIST ===== */
+  // Entries Card
   entriesCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -785,29 +710,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  headerRight: {
-    alignItems: 'flex-end',
+    padding: 16,
   },
   entriesTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1A',
   },
   entriesSubtitle: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: 12,
+    color: '#888',
     marginTop: 2,
   },
   countChip: {
     backgroundColor: 'rgba(25, 118, 210, 0.1)',
-    borderRadius: 8,
-    height: 28,
+    height: 32,
   },
   countChipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1976D2',
   },
@@ -815,205 +735,165 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(200, 200, 200, 0.1)',
   },
   entriesList: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    padding: 12,
   },
 
-  /* ===== EXPENSE CARD ===== */
+  // Expense Item
   expenseCard: {
     backgroundColor: '#fafafa',
     borderRadius: 12,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(200, 200, 200, 0.15)',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 200, 200, 0.1)',
   },
   expenseContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 14,
     gap: 12,
   },
   typeIndicator: {
-    width: 4,
+    width: 5,
     height: '100%',
     position: 'absolute',
     left: 0,
     top: 0,
-    bottom: 0,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
   },
   expenseInfo: {
     flex: 1,
-    marginLeft: 4,
   },
   expenseDetails: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
-    marginBottom: 3,
   },
   expenseDate: {
-    fontSize: 11,
-    color: '#999',
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
   },
   expenseActions: {
     alignItems: 'flex-end',
-    gap: 8,
   },
   amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  amountSymbol: {
+    fontSize: 12,
+    color: '#666',
   },
   expenseAmount: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   editButton: {
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    padding: 6,
+    padding: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
   deleteButton: {
     backgroundColor: 'rgba(244, 67, 54, 0.1)',
-    padding: 6,
+    padding: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 67, 54, 0.2)',
   },
-  editIcon: {
-    fontSize: 16,
-  },
-  deleteIcon: {
-    fontSize: 16,
-  },
+  editIcon: { fontSize: 18 },
+  deleteIcon: { fontSize: 18 },
 
-  /* ===== EMPTY STATE ===== */
+  // Totals
+  totalSummary: {
+    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(200, 200, 200, 0.1)',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  totalItem: {
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  totalAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  incomeAmount: { color: '#4CAF50' },
+  expenseAmount: { color: '#F44336' },
+  netAmount: { fontSize: 16, fontWeight: '800' },
+
+  // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 50,
   },
   emptyStateText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#666',
-    marginBottom: 6,
+    marginTop: 12,
   },
   emptyStateSubtext: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#999',
     textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 20,
   },
 
-  /* ===== MODAL STYLES ===== */
+  // Modal
   modalContainer: {
-    flex: 1,
+    padding: 20,
     justifyContent: 'center',
-    paddingHorizontal: 16,
   },
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    maxHeight: '90%',
-    borderWidth: 1,
-    borderColor: 'rgba(200, 200, 200, 0.15)',
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 0,
+    padding: 20,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1976D2',
   },
-  closeBtn: {
-    padding: 6,
-  },
   modalHeaderDivider: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 12,
-    backgroundColor: 'rgba(200, 200, 200, 0.1)',
+    marginHorizontal: 20,
   },
   modalScrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    padding: 20,
   },
   modalInput: {
-    backgroundColor: '#fafafa',
     marginBottom: 12,
-    fontSize: 14,
-    height: 48,
+    backgroundColor: '#fafafa',
   },
   modalSegmented: {
-    marginBottom: 16,
-    marginTop: 8,
+    marginVertical: 12,
   },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 20,
   },
   modalButton: {
     flex: 1,
-    borderRadius: 8,
-    height: 44,
-  },
-  modalButtonLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-
-  /* ===== TOTAL SUMMARY ===== */
-  totalSummary: {
-    backgroundColor: 'rgba(25, 118, 210, 0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(200, 200, 200, 0.1)',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  totalItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-  },
-  totalAmount: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  incomeAmount: {
-    color: '#4CAF50',
-  },
-  expenseAmount: {
-    color: '#F44336',
-  },
-  netAmount: {
-    fontSize: 14,
-    fontWeight: '800',
+    borderRadius: 12,
+    paddingVertical: 4,
   },
 });

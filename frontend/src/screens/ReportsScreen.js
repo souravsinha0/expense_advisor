@@ -140,37 +140,35 @@ export default function ReportsScreen({ navigation }) {
         </Surface>
 
         <Surface style={styles.card} elevation={3}>
-          <Text style={styles.cardTitle}>Date Range</Text>
+          <Text style={styles.cardTitle}>📅 Select Date Range</Text>
           <Divider style={styles.divider} />
 
-          <View style={styles.dateRow}>
-            <View style={styles.dateBox}>
-              <Text style={styles.label}>From</Text>
-              <View style={styles.dateButton}>
-                <Text style={styles.dateText}>{formatDate(fromDate)}</Text>
-                <IconButton
-                  icon="calendar"
-                  size={24}
-                  onPress={() => setShowFromPicker(true)}
-                  color="#4361ee"
-                />
+          <View style={styles.dateContainer}>
+            <TouchableOpacity 
+              style={styles.dateCard}
+              onPress={() => setShowFromPicker(true)}
+            >
+              <View style={styles.dateCardHeader}>
+                <Text style={styles.dateCardLabel}>From Date</Text>
+                <Text style={styles.calendarIcon}>📅</Text>
               </View>
+              <Text style={styles.dateCardValue}>{formatDate(fromDate)}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.arrowContainer}>
+              <Text style={styles.arrowIcon}>→</Text>
             </View>
 
-            <Text style={styles.arrow}>→</Text>
-
-            <View style={styles.dateBox}>
-              <Text style={styles.label}>To</Text>
-              <View style={styles.dateButton}>
-                <Text style={styles.dateText}>{formatDate(toDate)}</Text>
-                <IconButton
-                  icon="calendar"
-                  size={24}
-                  onPress={() => setShowToPicker(true)}
-                  color="#4361ee"
-                />
+            <TouchableOpacity 
+              style={styles.dateCard}
+              onPress={() => setShowToPicker(true)}
+            >
+              <View style={styles.dateCardHeader}>
+                <Text style={styles.dateCardLabel}>To Date</Text>
+                <Text style={styles.calendarIcon}>📅</Text>
               </View>
-            </View>
+              <Text style={styles.dateCardValue}>{formatDate(toDate)}</Text>
+            </TouchableOpacity>
           </View>
 
           <DatePickerModal
@@ -246,35 +244,82 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', color: 'white' },
-  headerSubtitle: { fontSize: 16, color: '#dbeafe', marginTop: 6 },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: 'white',
+    '@media (min-width: 768px)': { fontSize: 28 }
+  },
+  headerSubtitle: { 
+    fontSize: 14, 
+    color: '#dbeafe', 
+    marginTop: 6,
+    '@media (min-width: 768px)': { fontSize: 16 }
+  },
 
   card: { backgroundColor: 'white', borderRadius: 18, padding: 18, marginBottom: 16 },
   downloadCard: { borderWidth: 1.5, borderColor: '#10b98130' },
   cardTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 4 },
   divider: { marginVertical: 14, backgroundColor: '#e2e8f0' },
 
-  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dateBox: { flex: 1 },
-  label: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 8 },
-  dateButton: {
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateCard: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    minHeight: 70,
+  },
+  dateCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    marginBottom: 6,
   },
-  dateText: { fontSize: 16, fontWeight: '600', color: '#1e293b' },
-  arrow: { fontSize: 30, color: '#94a3b8', marginHorizontal: 16 },
+  dateCardLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+  },
+  calendarIcon: {
+    fontSize: 14,
+  },
+  dateCardValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  arrowContainer: {
+    paddingHorizontal: 8,
+  },
+  arrowIcon: {
+    fontSize: 18,
+    color: '#94a3b8',
+  },
 
-  buttonRow: { flexDirection: 'row', gap: 14, marginTop: 10 },
+  buttonRow: { 
+    flexDirection: 'row', 
+    gap: 12, 
+    marginTop: 10
+  },
   btnHeight: { height: 56 },
-  pdfBtn: { flex: 1, backgroundColor: '#7b4d81ff', borderRadius: 14 },
-  excelBtn: { flex: 1, backgroundColor: '#16a1a3ff', borderRadius: 14 },
+  pdfBtn: { 
+    flex: 1, 
+    backgroundColor: '#dc2626', 
+    borderRadius: 14
+  },
+  excelBtn: { 
+    flex: 1, 
+    backgroundColor: '#16a34a', 
+    borderRadius: 14
+  },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   pickerModal: { width: '80%', maxWidth: 400, borderRadius: 20, padding: 20 },

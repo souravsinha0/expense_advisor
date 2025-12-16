@@ -210,7 +210,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   suggestionsContainer: {
-    width: '20%',
+    width: '100%',
+    maxWidth: 400,
     gap: 10,
   },
   suggestionChip: {

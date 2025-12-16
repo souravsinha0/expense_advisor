@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { expenseAPI, aiAPI, userAPI } from '../services/api';
 import { commonStyles } from '../utils/theme';
 
-const { width: windowWidth } = Dimensions.get('window');
+const { width: initialWindowWidth } = Dimensions.get('window');
 
 export default function DashboardScreen({ navigation }) {
   const { user, logout, updateUser } = useAuth();
@@ -19,8 +19,8 @@ export default function DashboardScreen({ navigation }) {
   const [profileVisible, setProfileVisible] = useState(false);
   const [profileData, setProfileData] = useState({});
 
-  // NEW: dynamic measured width for chart
-  const [chartWidth, setChartWidth] = useState(windowWidth - 40);
+  // Dynamic chart width - critical fix for mobile browser rendering
+  const [chartWidth, setChartWidth] = useState(initialWindowWidth - 64);
 
   useEffect(() => {
     loadDashboardData();
@@ -103,43 +103,43 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </Surface>
 
-        {/* Chart Card (measures container width and uses it) */}
+        {/* Chart Card - Fixed for mobile browser */}
         {chartData && (
           <Surface style={styles.chartCard} elevation={6}>
             <Text style={styles.chartTitle}>Income vs Expenses (Last 4 Months)</Text>
 
-            {/* onLayout measures available width and stores it in chartWidth */}
-            <View
-              style={styles.chartContainer}
-              onLayout={(e) => {
-                const w = e.nativeEvent.layout.width;
-                // keep a small safe padding internally (so chart dots/shadow don't touch edges)
-                const safe = Math.max(0, w - 8);
-                if (safe !== chartWidth) setChartWidth(safe);
+            {/* Wrapper to measure actual available width */}
+            <View 
+              style={styles.chartWrapper}
+              onLayout={(event) => {
+                const { width } = event.nativeEvent.layout;
+                setChartWidth(width - 32); // subtract padding for better fit
               }}
             >
-              {/* pass the measured chartWidth so chart never overflows */}
-              <AnimatedLineChart
-                data={chartData}
-                width={Math.max(0, Math.floor(chartWidth))}
-                height={260}
-                chartConfig={{
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: () => '#64748b',
-                  labelColor: () => '#94a3b8',
-                  propsForDots: { r: "6", strokeWidth: "3", stroke: "#fff" },
-                  fillShadowGradient: '#3b82f6',
-                  fillShadowGradientOpacity: 0.1,
-                }}
-                bezier
-                withDots
-                withShadow
-                fromZero
-                yAxisLabel="₹"
-                style={{ borderRadius: 12, overflow: 'hidden' }}
-              />
+              <View style={styles.chartContainer}>
+                <AnimatedLineChart
+                  data={chartData}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={{
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: () => '#64748b',
+                    labelColor: () => '#94a3b8',
+                    propsForDots: { r: "4", strokeWidth: "2", stroke: "#fff" },
+                    fillShadowGradient: '#3b82f6',
+                    fillShadowGradientOpacity: 0.15,
+                    propsForLabels: { fontSize: 11 },
+                    propsForBackgroundLines: { strokeWidth: 1 },
+                  }}
+                  bezier
+                  withDots
+                  fromZero
+                  yAxisLabel="₹ "
+                  style={{ borderRadius: 12 }}
+                />
+              </View>
             </View>
 
             <View style={styles.legend}>
@@ -245,31 +245,51 @@ const styles = StyleSheet.create({
 
   // Header
   headerCard: { backgroundColor: '#204ea8fb', borderRadius: 20, padding: 22, marginBottom: 20 },
-  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerContent: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 12
+  },
   greeting: { fontSize: 15, color: '#e0e7ff', fontWeight: '500' },
   userName: { fontSize: 26, color: 'white', fontWeight: 'bold', marginVertical: 4 },
   subtitle: { fontSize: 14, color: '#c7d2fe' },
-  actions: { flexDirection: 'row', gap: 12 },
-  iconBtn: { backgroundColor: 'rgba(255,255,255,0.18)', padding: 12, borderRadius: 14 },
-  icon: { fontSize: 20, color: 'white' },
+  actions: { 
+    flexDirection: 'row', 
+    gap: 8,
+    flexShrink: 0,
+    minWidth: 120
+  },
+  iconBtn: { 
+    backgroundColor: 'rgba(255,255,255,0.18)', 
+    paddingHorizontal: 8, 
+    paddingVertical: 6, 
+    borderRadius: 12,
+    minWidth: 50
+  },
+  icon: { fontSize: 11, color: 'white', fontWeight: '600' },
 
-  // Chart Card (prevent overflow)
+  // Chart Card
   chartCard: {
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 16,
     marginBottom: 20,
-    // IMPORTANT: keep overflow hidden so chart shadow/dots won't overflow rounded corners
     overflow: 'hidden',
   },
   chartTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', textAlign: 'center', marginBottom: 12 },
 
-  // Chart container now takes full width of card
+  chartWrapper: {
+    width: '100%',
+    marginBottom: 12,
+  },
+
   chartContainer: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    overflow: 'hidden',
   },
 
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
